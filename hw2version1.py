@@ -33,10 +33,10 @@ def onehot_to_seq(oh_seq, index):
 def print_results(x, y_, revsere_decoder_index):
     # print("input     : " + str(x))
     # print("prediction: " + str(onehot_to_seq(y_, revsere_decoder_index).upper()))
-    print(str(onehot_to_seq(y_, revsere_decoder_index).upper()))
+    return str(onehot_to_seq(y_, revsere_decoder_index).upper())
 
 # Computes and returns the n-grams of a particualr sequence, defaults to trigrams
-def seq2ngrams(seqs, n = 3):
+def seq2ngrams(seqs, n = 2):
     return np.array([[seq[i : i + n] for i in range(len(seq))] for seq in seqs])
 
 
@@ -44,7 +44,7 @@ def seq2ngrams(seqs, n = 3):
 train_df = pd.read_csv('train.csv')
 test_df = pd.read_csv('test.csv')
 
-maxlen_seq = 512
+maxlen_seq = 1024
 
 # Loading and converting the inputs to trigrams
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
@@ -81,10 +81,10 @@ n_tags = len(tokenizer_decoder.word_index) + 1
 input = Input(shape = (maxlen_seq,))
 
 # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
-x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
+x = Embedding(input_dim = n_words, output_dim = 256, input_length = maxlen_seq)(input)
 
 # Defining a bidirectional LSTM using the embedded representation of the inputs
-x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
+x = Bidirectional(LSTM(units = 128, return_sequences = True, recurrent_dropout = 0.1))(x)
 
 # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
 y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
@@ -117,13 +117,17 @@ model.compile(optimizer = "rmsprop", loss = "categorical_crossentropy", metrics 
 X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
 
 # Training the model on the training data and validating using the validation set
-model.fit(X_train, y_train, batch_size = 128, epochs = 5, validation_data = (X_val, y_val), verbose = 1)
+model.fit(X_train, y_train, batch_size = 128, epochs = 7, validation_data = (X_val, y_val), verbose = 1)
 
 # Defining the decoders so that we can
 revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
 revsere_encoder_index = {value:key for key,value in tokenizer_encoder.word_index.items()}
 
 y_test_pred = model.predict(test_input_data[:])
+result = []
 print(len(test_input_data))
 for i in range(len(test_input_data)):
-    print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index)
+    result.append(print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index))
+
+df = pd.DataFrame(data={'id':test_df['id'], 'expected':result})
+df.to_csv('prediction.csv', index=False)
