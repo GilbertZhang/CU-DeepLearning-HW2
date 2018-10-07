@@ -24,12 +24,13 @@ class AttentionDecoder(Recurrent):
                  **kwargs):
         """
         Implements an AttentionDecoder that takes in a sequence encoded by an
-        encoder and outputs the decoded states 
+        encoder and outputs the decoded states
         :param units: dimension of the hidden state and the attention matrices
         :param output_dim: the number of labels in the output space
+
         references:
-            Bahdanau, Dzmitry, Kyunghyun Cho, and Yoshua Bengio. 
-            "Neural machine translation by jointly learning to align and translate." 
+            Bahdanau, Dzmitry, Kyunghyun Cho, and Yoshua Bengio.
+            "Neural machine translation by jointly learning to align and translate."
             arXiv preprint arXiv:1409.0473 (2014).
         """
         self.units = units
@@ -210,8 +211,6 @@ class AttentionDecoder(Recurrent):
         return super(AttentionDecoder, self).call(x)
 
     def get_initial_state(self, inputs):
-        print('inputs shape:', inputs.get_shape())
-
         # apply the matrix on the first time step to get the initial s0.
         s0 = activations.tanh(K.dot(inputs[:, 0], self.W_s))
 
@@ -302,14 +301,3 @@ class AttentionDecoder(Recurrent):
         }
         base_config = super(AttentionDecoder, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
-
-# check to see if it compiles
-if __name__ == '__main__':
-    from keras.layers import Input, LSTM
-    from keras.models import Model
-    from keras.layers.wrappers import Bidirectional
-    i = Input(shape=(100,104), dtype='float32')
-    enc = Bidirectional(LSTM(64, return_sequences=True), merge_mode='concat')(i)
-    dec = AttentionDecoder(32, 4)(enc)
-    model = Model(inputs=i, outputs=dec)
-    model.summary()

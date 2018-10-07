@@ -86,8 +86,8 @@ x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(
 
 # Defining a bidirectional LSTM using the embedded representation of the inputs
 x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
-y = AttentionDecoder(x, output_dim=n_tags, trainable=True)(x)
-# A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
+y = AttentionDecoder(128, n_tags)(x)
+# # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
 # y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
 
 # Defining the model as a whole and printing the summary
