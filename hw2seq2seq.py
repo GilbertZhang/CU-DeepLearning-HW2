@@ -9,7 +9,8 @@ from sklearn.model_selection import train_test_split
 from keras.metrics import categorical_accuracy
 from keras import backend as K
 import tensorflow as tf
-
+import seq2seq
+from seq2seq.models import AttentionSeq2Seq
 
 # The custom accuracy metric used for this task
 def accuracy(y_true, y_pred):
@@ -84,10 +85,12 @@ input = Input(shape = (maxlen_seq,))
 x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
 
 # Defining a bidirectional LSTM using the embedded representation of the inputs
-x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
+# x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
 
 # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
-y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
+#y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
+
+y = AttentionSeq2Seq(input_dim=128, input_length=maxlen_seq, hidden_dim=128, output_length=maxlen_seq, output_dim=n_tags, depth=3)(x)
 
 # Defining the model as a whole and printing the summary
 model = Model(input, y)
