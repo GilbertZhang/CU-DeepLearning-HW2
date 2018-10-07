@@ -4,7 +4,7 @@ from keras.preprocessing import text, sequence
 from keras.preprocessing.text import Tokenizer
 from keras.utils import to_categorical
 from keras.models import Model, Input
-from keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional, Conv2D, Reshape
+from keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional, Conv2D, Reshape, Dropout, MaxPooling2D, Activation, BatchNormalization
 from sklearn.model_selection import train_test_split
 from keras.metrics import categorical_accuracy
 from keras import backend as K
@@ -83,12 +83,17 @@ input = Input(shape = (maxlen_seq,))
 # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
 x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
 x = Reshape((512, 128, 1))(x)
-x= Conv2D(4, kernel_size = (3,3), padding='same')(x)
-x= Conv2D(8, kernel_size = (3,3), padding='same')(x)
-x= Conv2D(16, kernel_size = (3,3), padding='same')(x)
-x = Reshape((512,128*16))(x)
-x = Dense(256, activation='elu')(x)
-print(x)
+x = Conv2D(8, kernel_size = (3,3), padding='same')(x)
+x = MaxPooling2D(pool_size=(1, 2))(x)
+x = Conv2D(16, kernel_size = (3,3), padding='same')(x)
+x = MaxPooling2D(pool_size=(1, 2))(x)
+x = Conv2D(16, kernel_size = (3,3), padding='same')(x)
+x = MaxPooling2D(pool_size=(1, 2))(x)
+x = Reshape((512,128/8*16))(x)
+x = Dense(256)(x)
+x = BatchNormalization()(x)
+x = Activation('elu')(x)
+x = Dropout(0.3)(x)
 # Defining a bidirectional LSTM using the embedded representation of the inputs
 x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.3))(x)
 
