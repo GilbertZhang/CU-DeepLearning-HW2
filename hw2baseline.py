@@ -85,7 +85,9 @@ x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(
 x = Reshape((512, 128, 1))(x)
 x= Conv2D(4, kernel_size = (3,3), padding='same')(x)
 x= Conv2D(8, kernel_size = (3,3), padding='same')(x)
-x = Reshape((512,1024))(x)
+x= Conv2D(16, kernel_size = (3,3), padding='same')(x)
+x = Reshape((512,128*16))(x)
+x = Dense(256, activation='elu')(x)
 print(x)
 # Defining a bidirectional LSTM using the embedded representation of the inputs
 x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.3))(x)
@@ -121,7 +123,7 @@ model.compile(optimizer = "rmsprop", loss = "categorical_crossentropy", metrics 
 X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
 
 # Training the model on the training data and validating using the validation set
-model.fit(X_train, y_train, batch_size = 128, epochs = 5, validation_data = (X_val, y_val), verbose = 1)
+model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), verbose = 1)
 
 # Defining the decoders so that we can
 revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
