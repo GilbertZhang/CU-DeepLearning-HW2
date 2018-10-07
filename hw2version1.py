@@ -44,7 +44,7 @@ def seq2ngrams(seqs, n = 2):
 train_df = pd.read_csv('train.csv')
 test_df = pd.read_csv('test.csv')
 
-maxlen_seq = 1024
+maxlen_seq = 512
 
 # Loading and converting the inputs to trigrams
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
@@ -85,6 +85,9 @@ x = Embedding(input_dim = n_words, output_dim = 256, input_length = maxlen_seq)(
 
 # Defining a bidirectional LSTM using the embedded representation of the inputs
 x = Bidirectional(LSTM(units = 128, return_sequences = True, recurrent_dropout = 0.1))(x)
+x = Bidirectional(LSTM(units = 128, return_sequences = True, recurrent_dropout = 0.1))(x)
+x = Bidirectional(LSTM(units = 128, return_sequences = True, recurrent_dropout = 0.1))(x)
+
 
 # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
 y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
@@ -111,13 +114,13 @@ Non-trainable params: 0
 """
 
 # Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
-model.compile(optimizer = "rmsprop", loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
+model.compile(optimizer = "Adagrad", loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
 
 # Splitting the data for train and validation sets
 X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
 
 # Training the model on the training data and validating using the validation set
-model.fit(X_train, y_train, batch_size = 128, epochs = 7, validation_data = (X_val, y_val), verbose = 1)
+model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), verbose = 1)
 
 # Defining the decoders so that we can
 revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
