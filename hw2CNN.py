@@ -44,7 +44,7 @@ def seq2ngrams(seqs, n = 3):
 train_df = pd.read_csv('train.csv')
 test_df = pd.read_csv('test.csv')
 
-maxlen_seq = 512
+maxlen_seq = 1024
 
 # Loading and converting the inputs to trigrams
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
@@ -82,19 +82,17 @@ input = Input(shape = (maxlen_seq,))
 
 # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
 x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
-x = Reshape((512, 128, 1))(x)
+x = Reshape((maxlen_seq, 128, 1))(x)
 x = Conv2D(4, kernel_size = (3,3), padding='same')(x)
 x = MaxPooling2D(pool_size=(1, 2))(x)
-x = Activation('elu')(x)
 x = Conv2D(8, kernel_size = (3,3), padding='same')(x)
 x = MaxPooling2D(pool_size=(1, 2))(x)
-x = Activation('elu')(x)
-x = Reshape((512,128//8*8))(x)
+x = Reshape((maxlen_seq,128//4*8))(x)
 x = Dense(128)(x)
 x = Activation('elu')(x)
-x = Dropout(0.3)(x)
+x = Dropout(0.5)(x)
 # Defining a bidirectional LSTM using the embedded representation of the inputs
-x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.3))(x)
+x = Bidirectional(LSTM(units = 256, return_sequences = True, recurrent_dropout = 0.4))(x)
 
 # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
 y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
