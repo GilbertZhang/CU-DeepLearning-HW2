@@ -84,10 +84,11 @@ input = Input(shape = (maxlen_seq,))
 x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
 x = Reshape((512, 128, 1))(x)
 x= Conv2D(4, kernel_size = (3,3), padding='same')(x)
-x = Reshape((512,512))(x)
+x= Conv2D(8, kernel_size = (3,3), padding='same')(x)
+x = Reshape((512,1024))(x)
 print(x)
 # Defining a bidirectional LSTM using the embedded representation of the inputs
-x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
+x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.3))(x)
 
 # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
 y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
