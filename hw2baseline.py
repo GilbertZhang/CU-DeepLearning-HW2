@@ -4,7 +4,7 @@ from keras.preprocessing import text, sequence
 from keras.preprocessing.text import Tokenizer
 from keras.utils import to_categorical
 from keras.models import Model, Input
-from keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional
+from keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional, Conv2D, Reshape
 from sklearn.model_selection import train_test_split
 from keras.metrics import categorical_accuracy
 from keras import backend as K
@@ -33,7 +33,7 @@ def onehot_to_seq(oh_seq, index):
 def print_results(x, y_, revsere_decoder_index):
     # print("input     : " + str(x))
     # print("prediction: " + str(onehot_to_seq(y_, revsere_decoder_index).upper()))
-    print(str(onehot_to_seq(y_, revsere_decoder_index).upper()))
+    return str(onehot_to_seq(y_, revsere_decoder_index).upper())
 
 # Computes and returns the n-grams of a particualr sequence, defaults to trigrams
 def seq2ngrams(seqs, n = 3):
@@ -82,7 +82,10 @@ input = Input(shape = (maxlen_seq,))
 
 # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
 x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
-
+x = Reshape((512, 128, 1))(x)
+x= Conv2D(4, kernel_size = (3,3), padding='same')(x)
+x = Reshape((512,512))(x)
+print(x)
 # Defining a bidirectional LSTM using the embedded representation of the inputs
 x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
 
@@ -124,6 +127,10 @@ revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index
 revsere_encoder_index = {value:key for key,value in tokenizer_encoder.word_index.items()}
 
 y_test_pred = model.predict(test_input_data[:])
+result = []
 print(len(test_input_data))
 for i in range(len(test_input_data)):
-    print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index)
+    result.append(print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index))
+
+df = pd.DataFrame(data={'id':test_df['id'], 'expected':result})
+df.to_csv('prediction.csv', index=False)
