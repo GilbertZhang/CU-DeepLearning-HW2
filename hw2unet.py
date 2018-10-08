@@ -87,6 +87,8 @@ x = Reshape((maxlen_seq, 128, 1))(x)
 conv1 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
 conv1 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
 pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+pool1 = Dropout(0.5)(pool1)
+
 # conv2 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool1)
 # conv2 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv2)
 # pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
@@ -99,8 +101,8 @@ pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 # drop4 = Dropout(0.5)(conv4)
 # pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
 
-conv5 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool1)
-conv5 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
+conv5 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool1)
+conv5 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
 drop5 = Dropout(0.5)(conv5)
 
 # up6 = Conv2D(512, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(drop5))
@@ -125,6 +127,7 @@ conv9 = Conv2D(16, 3, activation = 'relu', padding = 'same', kernel_initializer 
 flatten = Reshape((maxlen_seq, 128*16))(conv9)
 flatten = Dropout(0.5)(flatten)
 flatten = Dense(64, activation = 'relu')(flatten)
+flatten = Dropout(0.5)(flatten)
 y = Dense(n_tags, activation = 'softmax')(flatten)
 
 
