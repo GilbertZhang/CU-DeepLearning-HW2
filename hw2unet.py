@@ -83,8 +83,8 @@ input = Input(shape = (maxlen_seq,))
 
 # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
 x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
-x = Reshape((maxlen_seq, 128, 1))(x)
-conv1 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
+conv_input = Reshape((maxlen_seq, 128, 1))(x)
+conv1 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv_input)
 conv1 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
 pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 pool1 = Dropout(0.5)(pool1)
@@ -164,7 +164,7 @@ model.compile(optimizer = "rmsprop", loss = "categorical_crossentropy", metrics 
 X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
 
 # Training the model on the training data and validating using the validation set
-model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), verbose = 1)
+model.fit(X_train, y_train, batch_size = 64, epochs = 10, validation_data = (X_val, y_val), verbose = 1)
 
 # Defining the decoders so that we can
 revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
