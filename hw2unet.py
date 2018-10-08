@@ -124,11 +124,16 @@ up9 = Conv2D(32, 2, activation = 'relu', padding = 'same', kernel_initializer = 
 merge9 = concatenate([conv1,up9], axis = 3)
 conv9 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
 conv9 = Conv2D(16, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
+
+lstm = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
+
 flatten = Reshape((maxlen_seq, 128*16))(conv9)
 flatten = Dropout(0.5)(flatten)
 flatten = Dense(64, activation = 'relu')(flatten)
 flatten = Dropout(0.5)(flatten)
-y = Dense(n_tags, activation = 'softmax')(flatten)
+concat = concatenate([lstm, flatten], axis=2)
+concat = Dense(64, activation = 'relu')(concat)
+y = Dense(n_tags, activation = 'softmax')(concat)
 
 
 # Defining the model as a whole and printing the summary
