@@ -117,12 +117,14 @@ up8 = Conv2D(64, 2, activation = 'relu', padding = 'same', kernel_initializer = 
 merge8 = concatenate([conv2,up8], axis = 3)
 conv8 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8)
 conv8 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8)
+conv8 = Dropout(0.5)(conv8)
 
 up9 = Conv2D(32, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv8))
 merge9 = concatenate([conv1,up9], axis = 3)
 conv9 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
-conv9 = Conv2D(8, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-flatten = Reshape((maxlen_seq, 128*8))(conv9)
+conv9 = Conv2D(16, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
+flatten = Reshape((maxlen_seq, 128*16))(conv9)
+conv8 = Dropout(0.5)(flatten)
 flatten = Dense(64, activation = 'elu')(flatten)
 y = Dense(n_tags, activation = 'softmax')(flatten)
 
