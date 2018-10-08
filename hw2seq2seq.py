@@ -4,7 +4,7 @@ from keras.preprocessing import text, sequence
 from keras.preprocessing.text import Tokenizer
 from keras.utils import to_categorical
 from keras.models import Model, Input
-from keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional
+from keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional, Activation
 from sklearn.model_selection import train_test_split
 from keras.metrics import categorical_accuracy
 from keras import backend as K
@@ -90,8 +90,8 @@ x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(
 # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
 #y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
 
-y = AttentionSeq2Seq(input_dim=128, input_length=maxlen_seq, hidden_dim=128, output_length=maxlen_seq, output_dim=n_tags, depth=3)(x)
-
+x = AttentionSeq2Seq(input_dim=128, input_length=maxlen_seq, hidden_dim=128, output_length=maxlen_seq, output_dim=n_tags, depth=1)(x)
+y = Activation("softmax")(x)
 # Defining the model as a whole and printing the summary
 model = Model(input, y)
 model.summary()
