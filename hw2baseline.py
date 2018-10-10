@@ -45,7 +45,7 @@ def seq2ngrams(seqs, n = 3):
 train_df = pd.read_csv('train.csv')
 test_df = pd.read_csv('test.csv')
 
-maxlen_seq = test_df.input.str.len().max()
+maxlen_seq = int(test_df.input.str.len().max())
 
 # Loading and converting the inputs to trigrams
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
