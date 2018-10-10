@@ -34,10 +34,10 @@ def onehot_to_seq(oh_seq, index):
 def print_results(x, y_, revsere_decoder_index):
     # print("input     : " + str(x))
     # print("prediction: " + str(onehot_to_seq(y_, revsere_decoder_index).upper()))
-    return str(onehot_to_seq(y_, revsere_decoder_index).upper())[:len(y_)]
+    return str(onehot_to_seq(y_, revsere_decoder_index).upper())[:len(x)]
 
 # Computes and returns the n-grams of a particualr sequence, defaults to trigrams
-def seq2ngrams(seqs, n = 3):
+def seq2ngrams(seqs, n = 1):
     return np.array([[seq[i : i + n] for i in range(len(seq))] for seq in seqs])
 
 
@@ -72,8 +72,8 @@ train_target_data = sequence.pad_sequences(train_target_data, maxlen = maxlen_se
 train_target_data = to_categorical(train_target_data)
 
 # Use the same tokenizer defined on train for tokenization of test
-test_input_data = tokenizer_encoder.texts_to_sequences(test_input_grams)
-test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
+test_input_data_ori = tokenizer_encoder.texts_to_sequences(test_input_grams)
+test_input_data = sequence.pad_sequences(test_input_data_ori, maxlen = maxlen_seq, padding = 'post')
 
 # Computing the number of words and number of tags to be passed as parameters to the keras model
 n_words = len(tokenizer_encoder.word_index) + 1
