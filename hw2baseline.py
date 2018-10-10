@@ -72,7 +72,7 @@ train_target_data = to_categorical(train_target_data)
 
 # Use the same tokenizer defined on train for tokenization of test
 test_input_data = tokenizer_encoder.texts_to_sequences(test_input_grams)
-test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
+# test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
 
 # Computing the number of words and number of tags to be passed as parameters to the keras model
 n_words = len(tokenizer_encoder.word_index) + 1
@@ -81,7 +81,7 @@ n_tags = len(tokenizer_decoder.word_index) + 1
 input = Input(shape = (maxlen_seq,))
 
 # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
-x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
+x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq, mask_zero = True)(input)
 
 # Defining a bidirectional LSTM using the embedded representation of the inputs
 x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
@@ -123,7 +123,7 @@ model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_
 revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
 revsere_encoder_index = {value:key for key,value in tokenizer_encoder.word_index.items()}
 
-y_test_pred = model.predict(test_input_data[:])
+y_test_pred = model.predict(test_input_data[:], batch_size=1)
 result = []
 print(len(test_input_data))
 for i in range(len(test_input_data)):

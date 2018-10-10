@@ -129,7 +129,7 @@ lstm = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout
 
 flatten = Reshape((maxlen_seq, 128*16))(conv9)
 flatten = Dropout(0.5)(flatten)
-flatten = Dense(64, activation = 'relu')(flatten)
+flatten = Dense(128, activation = 'relu')(flatten)
 flatten = Dropout(0.5)(flatten)
 concat = concatenate([lstm, flatten], axis=2)
 concat = Dense(64, activation = 'relu')(concat)
