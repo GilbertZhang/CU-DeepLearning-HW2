@@ -34,7 +34,7 @@ def onehot_to_seq(oh_seq, index):
 def print_results(x, y_, revsere_decoder_index):
     # print("input     : " + str(x))
     # print("prediction: " + str(onehot_to_seq(y_, revsere_decoder_index).upper()))
-    return str(onehot_to_seq(y_, revsere_decoder_index).upper())
+    return str(onehot_to_seq(y_, revsere_decoder_index).upper())[:len(y_)]
 
 # Computes and returns the n-grams of a particualr sequence, defaults to trigrams
 def seq2ngrams(seqs, n = 3):
