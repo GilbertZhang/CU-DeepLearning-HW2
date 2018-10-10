@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from keras.metrics import categorical_accuracy
 from keras import backend as K
 import tensorflow as tf
+from keras.callbacks import ModelCheckpoint
 
 
 # The custom accuracy metric used for this task
@@ -44,7 +45,7 @@ def seq2ngrams(seqs, n = 3):
 train_df = pd.read_csv('train.csv')
 test_df = pd.read_csv('test.csv')
 
-maxlen_seq = 512
+maxlen_seq = test_df.input.str.len().max()
 
 # Loading and converting the inputs to trigrams
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
@@ -72,7 +73,7 @@ train_target_data = to_categorical(train_target_data)
 
 # Use the same tokenizer defined on train for tokenization of test
 test_input_data = tokenizer_encoder.texts_to_sequences(test_input_grams)
-# test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
+test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
 
 # Computing the number of words and number of tags to be passed as parameters to the keras model
 n_words = len(tokenizer_encoder.word_index) + 1
@@ -111,19 +112,26 @@ Non-trainable params: 0
 """
 
 # Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
-model.compile(optimizer = "rmsprop", loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
+model.compile(optimizer = "rmsprop", loss = "categorical_crossentropy", metrics = ["accuracy"])
+
+
+filepath="weights.best.hdf5"
+checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+callbacks_list = [checkpoint]
+
 
 # Splitting the data for train and validation sets
 X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
 
 # Training the model on the training data and validating using the validation set
-model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), verbose = 1)
+model.fit(X_train, y_train, batch_size = 128, epochs = 15, validation_data = (X_val, y_val),  callbacks=callbacks_list, verbose = 1)
 
 # Defining the decoders so that we can
 revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
 revsere_encoder_index = {value:key for key,value in tokenizer_encoder.word_index.items()}
 
-y_test_pred = model.predict(test_input_data[:], batch_size=1)
+model.load_weights("weights.best.hdf5")
+y_test_pred = model.predict(test_input_data[:])
 result = []
 print(len(test_input_data))
 for i in range(len(test_input_data)):
