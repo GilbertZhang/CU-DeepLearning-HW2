@@ -112,7 +112,7 @@ Non-trainable params: 0
 
 """
 
-rmsprop = optimizers.RMSprop(lr=0.01)
+rmsprop = optimizers.RMSprop(lr=0.03)
 
 # Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
 model.compile(optimizer = rmsprop, loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
@@ -126,7 +126,7 @@ callbacks_list = [checkpoint]
 X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
 
 # Training the model on the training data and validating using the validation set
-model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), verbose = 1)
+model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
 
 # Defining the decoders so that we can
 revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
