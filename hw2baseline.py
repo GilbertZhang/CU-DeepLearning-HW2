@@ -148,7 +148,7 @@ if not cross_val:
     X_train, X_val, y_train, y_val = train_test_split(train_input_data1, train_target_data, test_size = .1, random_state = 27)
 
     # Training the model on the training data and validating using the validation set
-    model.fit(X_train, y_train, batch_size = 128, epochs = 20, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
+    model.fit(X_train, y_train, batch_size = 128, epochs = 1, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
 
     # Defining the decoders so that we can
     revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
@@ -178,7 +178,7 @@ else:
         mcp_save = ModelCheckpoint(name_weights, save_best_only=True, monitor='val_loss', mode='min')
         # reduce_lr_loss = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=patience_lr, verbose=1, epsilon=1e-4, mode='min')
         return [mcp_save]
-    k=10
+    k=5
     cv_acc = []
     cv_loss = []
     folds = list(KFold(n_splits=k, shuffle=True, random_state=1).split(train_input_data1, train_target_data))
@@ -195,13 +195,14 @@ else:
         model = get_model()
         model.fit(X_train_cv, y_train_cv,
                     batch_size = 128,
-                    epochs=1,
+                    epochs=15,
                     shuffle=True,
                     verbose=1,
                     validation_data = (X_valid_cv, y_valid_cv),
                     callbacks = callbacks)
         
         loss, _, acc = model.evaluate(X_valid_cv, y_valid_cv)
+        print(loss, acc)
         cv_acc.append(acc)
         cv_loss.append(loss)
     print("Average Accuracy: {}, Average Loss: {}".format(np.mean(cv_acc), np.mean(cv_loss)))
