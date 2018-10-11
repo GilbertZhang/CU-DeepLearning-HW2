@@ -11,6 +11,8 @@ from keras import backend as K
 import tensorflow as tf
 from keras.callbacks import ModelCheckpoint
 from keras import optimizers
+from sklearn.model_selection import StratifiedKFold
+
 
 # The custom accuracy metric used for this task
 def accuracy(y_true, y_pred):
@@ -79,65 +81,85 @@ test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, p
 n_words = len(tokenizer_encoder.word_index) + 1
 n_tags = len(tokenizer_decoder.word_index) + 1
 
-input = Input(shape = (maxlen_seq,))
+def get_model():
+    input = Input(shape = (maxlen_seq,))
 
-# Defining an embedding layer mapping from the words (n_words) to a vector of len 128
-x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
+    # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
+    x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
 
-# Defining a bidirectional LSTM using the embedded representation of the inputs
-x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
-x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
+    # Defining a bidirectional LSTM using the embedded representation of the inputs
+    x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
+    x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
 
-# A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
-y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
+    # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
+    y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
 
-# Defining the model as a whole and printing the summary
-model = Model(input, y)
-model.summary()
-"""
-_________________________________________________________________
-Layer (type)                 Output Shape              Param #   
-=================================================================
-input_1 (InputLayer)         (None, 512)               0         
-_________________________________________________________________
-embedding_1 (Embedding)      (None, 512, 128)          1225984   
-_________________________________________________________________
-bidirectional_1 (Bidirection (None, 512, 128)          98816     
-_________________________________________________________________
-time_distributed_1 (TimeDist (None, 512, 9)            1161      
-=================================================================
-Total params: 1,325,961
-Trainable params: 1,325,961
-Non-trainable params: 0
+    # Defining the model as a whole and printing the summary
+    model = Model(input, y)
+    model.summary()
 
-"""
+    rmsprop = optimizers.Adam(lr=0.02)
 
-rmsprop = optimizers.RMSprop(lr=0.03)
+    # Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
+    model.compile(optimizer = rmsprop, loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
+    
+    return model
 
-# Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
-model.compile(optimizer = rmsprop, loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
-
-filepath="weights.best.hdf5"
-checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
-callbacks_list = [checkpoint]
+cross_val = True
+if not cross_val:
+    
+    model = get_model()
+    filepath="weights.best.hdf5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+    callbacks_list = [checkpoint]
 
 
-# Splitting the data for train and validation sets
-X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
+    # Splitting the data for train and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
 
-# Training the model on the training data and validating using the validation set
-model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
+    # Training the model on the training data and validating using the validation set
+    model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
 
-# Defining the decoders so that we can
-revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
-revsere_encoder_index = {value:key for key,value in tokenizer_encoder.word_index.items()}
+    # Defining the decoders so that we can
+    revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
+    revsere_encoder_index = {value:key for key,value in tokenizer_encoder.word_index.items()}
 
-model.load_weights("weights.best.hdf5")
-y_test_pred = model.predict(test_input_data[:])
-result = []
-print(len(test_input_data))
-for i in range(len(test_input_data)):
-    result.append(print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index))
+    model.load_weights("weights.best.hdf5")
+    y_test_pred = model.predict(test_input_data[:])
+    result = []
+    print(len(test_input_data))
+    for i in range(len(test_input_data)):
+        result.append(print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index))
 
-df = pd.DataFrame(data={'id':test_df['id'], 'expected':result})
-df.to_csv('prediction.csv', index=False)
+    df = pd.DataFrame(data={'id':test_df['id'], 'expected':result})
+    df.to_csv('prediction.csv', index=False)
+
+else:
+
+    def get_callbacks(name_weights, patience_lr):
+        mcp_save = ModelCheckpoint(name_weights, save_best_only=True, monitor='val_loss', mode='min')
+        # reduce_lr_loss = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=patience_lr, verbose=1, epsilon=1e-4, mode='min')
+        return [mcp_save]
+    k=3
+    cvscores = []
+    folds = list(StratifiedKFold(n_splits=k, shuffle=True, random_state=1).split(train_input_data, train_target_data))
+    for j, (train_idx, val_idx) in enumerate(folds):
+        
+        print('\nFold ',j)
+        X_train_cv = train_input_data[train_idx]
+        y_train_cv = train_target_data[train_idx]
+        X_valid_cv = train_input_data[val_idx]
+        y_valid_cv= train_target_data[val_idx]
+        
+        name_weights = "final_model_fold" + str(j) + "_weights.h5"
+        callbacks = get_callbacks(name_weights = name_weights, patience_lr=10)
+        model = get_model()
+        model.fit(X_train_cv, y_train_cv,
+                    batch_size = 128,
+                    epochs=1,
+                    shuffle=True,
+                    verbose=1,
+                    validation_data = (X_valid_cv, y_valid_cv),
+                    callbacks = callbacks)
+        
+        print(model.evaluate(X_valid_cv, y_valid_cv))
