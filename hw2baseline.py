@@ -85,7 +85,7 @@ def preprocessing_test_x(test_input_seqs, tokenizer_encoder, n):
     test_input_grams = seq2ngrams(test_input_seqs, n)
     # Use the same tokenizer defined on train for tokenization of test
     test_input_data = tokenizer_encoder.texts_to_sequences(test_input_grams)
-    test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
+    # test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
     return test_input_data
 
 
@@ -103,8 +103,8 @@ def preprocessing_y(train_target_seqs):
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
 test_input_seqs = test_df['input'].values.T
 
-train_input_data1, tokenizer_encoder1 = preprocessing_tain_x(train_input_seqs, 2)
-test_input_data1 = preprocessing_test_x(test_input_seqs, tokenizer_encoder1, 2)
+train_input_data1, tokenizer_encoder1 = preprocessing_tain_x(train_input_seqs, 1)
+test_input_data1 = preprocessing_test_x(test_input_seqs, tokenizer_encoder1, 1)
 train_target_data, tokenizer_decoder = preprocessing_y(train_target_seqs)
 
 
@@ -145,7 +145,7 @@ if not cross_val:
 
 
     # Splitting the data for train and validation sets
-    X_train, X_val, y_train, y_val = train_test_split(train_input_data1, train_target_data, test_size = .1, random_state = 0)
+    X_train, X_val, y_train, y_val = train_test_split(train_input_data1, train_target_data, test_size = .1, random_state = 27)
 
     # Training the model on the training data and validating using the validation set
     model.fit(X_train, y_train, batch_size = 128, epochs = 20, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
@@ -163,11 +163,11 @@ if not cross_val:
         edit_dis.append(levenshtein(output, train_input_seqs[i]))
     print(np.mean(edit_dis))
 
-    y_test_pred = model.predict(test_input_data1[:])
     result = []
     
     for i in range(len(test_input_data1)):
-        output = print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index)
+        y_test_pred = model.predict(np.array(test_input_data1[i]), batch_size=1)
+        output = print_results(test_input_seqs[i], y_test_pred, revsere_decoder_index)
         result.append(output)
     df = pd.DataFrame(data={'id':test_df['id'], 'expected':result})
     df.to_csv('prediction.csv', index=False)
