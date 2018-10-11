@@ -103,8 +103,8 @@ def preprocessing_y(train_target_seqs):
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
 test_input_seqs = test_df['input'].values.T
 
-train_input_data1, tokenizer_encoder1 = preprocessing_tain_x(train_input_seqs, 1)
-test_input_data1 = preprocessing_test_x(test_input_seqs, tokenizer_encoder1, 1)
+train_input_data1, tokenizer_encoder1 = preprocessing_tain_x(train_input_seqs, 2)
+test_input_data1 = preprocessing_test_x(test_input_seqs, tokenizer_encoder1, 2)
 train_target_data, tokenizer_decoder = preprocessing_y(train_target_seqs)
 
 
@@ -117,18 +117,9 @@ def get_model():
 
     # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
     x1 = Embedding(input_dim = n_words1, output_dim = 128, input_length = None)(input1)
-    x1 = Reshape((maxlen_seq, 128, 1))(x1)
-    x1 = Conv2D(4, kernel_size = (3,3), padding='same')(x1)
-    x1 = MaxPooling2D(pool_size=(1, 2))(x1)
-    x1 = Conv2D(8, kernel_size = (3,3), padding='same')(x1)
-    x1 = MaxPooling2D(pool_size=(1, 2))(x1)
-    x1 = Reshape((maxlen_seq,128//4*8))(x1)
-    x1 = Dense(128)(x1)
-    x1 = Activation('elu')(x1)
-    x1 = Dropout(0.5)(x1)
 
-    x1 = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x1)
-    x1 = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x1)
+    x1 = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0))(x1)
+    x1 = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0))(x1)
     x1 = Dense(32, activation="relu")(x1)
     # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
     y = Dense(n_tags, activation = "softmax")(x1)
