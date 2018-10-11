@@ -10,7 +10,7 @@ from keras.metrics import categorical_accuracy
 from keras import backend as K
 import tensorflow as tf
 from keras.callbacks import ModelCheckpoint
-from keras import optimizers
+
 
 # The custom accuracy metric used for this task
 def accuracy(y_true, y_pred):
@@ -34,7 +34,7 @@ def onehot_to_seq(oh_seq, index):
 def print_results(x, y_, revsere_decoder_index):
     # print("input     : " + str(x))
     # print("prediction: " + str(onehot_to_seq(y_, revsere_decoder_index).upper()))
-    return str(onehot_to_seq(y_, revsere_decoder_index).upper())
+    return str(onehot_to_seq(y_, revsere_decoder_index).upper())[:len(x)]
 
 # Computes and returns the n-grams of a particualr sequence, defaults to trigrams
 def seq2ngrams(seqs, n = 1):
@@ -45,7 +45,7 @@ def seq2ngrams(seqs, n = 1):
 train_df = pd.read_csv('train.csv')
 test_df = pd.read_csv('test.csv')
 
-maxlen_seq = 512
+maxlen_seq = int(test_df.input.str.len().max())
 
 # Loading and converting the inputs to trigrams
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
@@ -72,8 +72,8 @@ train_target_data = sequence.pad_sequences(train_target_data, maxlen = maxlen_se
 train_target_data = to_categorical(train_target_data)
 
 # Use the same tokenizer defined on train for tokenization of test
-test_input_data = tokenizer_encoder.texts_to_sequences(test_input_grams)
-test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
+test_input_data_ori = tokenizer_encoder.texts_to_sequences(test_input_grams)
+test_input_data = sequence.pad_sequences(test_input_data_ori, maxlen = maxlen_seq, padding = 'post')
 
 # Computing the number of words and number of tags to be passed as parameters to the keras model
 n_words = len(tokenizer_encoder.word_index) + 1
@@ -82,10 +82,9 @@ n_tags = len(tokenizer_decoder.word_index) + 1
 input = Input(shape = (maxlen_seq,))
 
 # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
-x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
+x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq, mask_zero = True)(input)
 
 # Defining a bidirectional LSTM using the embedded representation of the inputs
-x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
 x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
 
 # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
@@ -112,10 +111,9 @@ Non-trainable params: 0
 
 """
 
-rmsprop = optimizers.RMSprop(lr=0.01)
-
 # Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
-model.compile(optimizer = rmsprop, loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
+model.compile(optimizer = "rmsprop", loss = "categorical_crossentropy", metrics = ["accuracy"])
+
 
 filepath="weights.best.hdf5"
 checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
@@ -126,7 +124,7 @@ callbacks_list = [checkpoint]
 X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
 
 # Training the model on the training data and validating using the validation set
-model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), verbose = 1)
+model.fit(X_train, y_train, batch_size = 128, epochs = 15, validation_data = (X_val, y_val),  callbacks=callbacks_list, verbose = 1)
 
 # Defining the decoders so that we can
 revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
