@@ -4,7 +4,7 @@ from keras.preprocessing import text, sequence
 from keras.preprocessing.text import Tokenizer
 from keras.utils import to_categorical
 from keras.models import Model, Input
-from keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional
+from keras.layers import *
 from sklearn.model_selection import train_test_split
 from keras.metrics import categorical_accuracy
 from keras import backend as K
@@ -12,6 +12,8 @@ import tensorflow as tf
 from keras.callbacks import ModelCheckpoint
 from keras import optimizers
 from sklearn.model_selection import KFold
+import keras
+
 
 def levenshtein(s1, s2):
     if len(s1) < len(s2):
@@ -69,53 +71,70 @@ test_df = pd.read_csv('test.csv')
 
 maxlen_seq = 512
 
-# Loading and converting the inputs to trigrams
+def preprocessing_tain_x(train_input_seqs, n):
+    train_input_grams = seq2ngrams(train_input_seqs, n)
+    tokenizer_encoder = Tokenizer()
+    tokenizer_encoder.fit_on_texts(train_input_grams)
+    # Using the tokenizer to encode and decode the sequences for use in training
+    # Inputs
+    train_input_data = tokenizer_encoder.texts_to_sequences(train_input_grams)
+    train_input_data = sequence.pad_sequences(train_input_data, maxlen = maxlen_seq, padding = 'post')
+    return train_input_data, tokenizer_encoder
+
+def preprocessing_test_x(test_input_seqs, tokenizer_encoder, n):
+    test_input_grams = seq2ngrams(test_input_seqs, n)
+    # Use the same tokenizer defined on train for tokenization of test
+    test_input_data = tokenizer_encoder.texts_to_sequences(test_input_grams)
+    test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
+    return test_input_data
+
+
+def preprocessing_y(train_target_seqs):
+    # Initializing and defining the tokenizer encoders and decoders based on the train set
+    tokenizer_decoder = Tokenizer(char_level = True)
+    tokenizer_decoder.fit_on_texts(train_target_seqs)
+    # Targets
+    train_target_data = tokenizer_decoder.texts_to_sequences(train_target_seqs)
+    train_target_data_ori = sequence.pad_sequences(train_target_data, maxlen = maxlen_seq, padding = 'post')
+    train_target_data = to_categorical(train_target_data_ori)
+    return train_target_data, tokenizer_decoder
+
+# Loading
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
-train_input_grams = seq2ngrams(train_input_seqs)
-
-# Same for test
 test_input_seqs = test_df['input'].values.T
-test_input_grams = seq2ngrams(test_input_seqs)
 
-# Initializing and defining the tokenizer encoders and decoders based on the train set
-tokenizer_encoder = Tokenizer()
-tokenizer_encoder.fit_on_texts(train_input_grams)
-tokenizer_decoder = Tokenizer(char_level = True)
-tokenizer_decoder.fit_on_texts(train_target_seqs)
+train_input_data1, tokenizer_encoder1 = preprocessing_tain_x(train_input_seqs, 1)
+test_input_data1 = preprocessing_test_x(test_input_seqs, tokenizer_encoder1, 1)
+train_target_data, tokenizer_decoder = preprocessing_y(train_target_seqs)
 
-# Using the tokenizer to encode and decode the sequences for use in training
-# Inputs
-train_input_data = tokenizer_encoder.texts_to_sequences(train_input_grams)
-train_input_data = sequence.pad_sequences(train_input_data, maxlen = maxlen_seq, padding = 'post')
-
-# Targets
-train_target_data = tokenizer_decoder.texts_to_sequences(train_target_seqs)
-train_target_data_ori = sequence.pad_sequences(train_target_data, maxlen = maxlen_seq, padding = 'post')
-train_target_data = to_categorical(train_target_data_ori)
-
-# Use the same tokenizer defined on train for tokenization of test
-test_input_data = tokenizer_encoder.texts_to_sequences(test_input_grams)
-test_input_data = sequence.pad_sequences(test_input_data, maxlen = maxlen_seq, padding = 'post')
 
 # Computing the number of words and number of tags to be passed as parameters to the keras model
-n_words = len(tokenizer_encoder.word_index) + 1
+n_words1 = len(tokenizer_encoder1.word_index) + 1
 n_tags = len(tokenizer_decoder.word_index) + 1
 
 def get_model():
-    input = Input(shape = (None,))
+    input1 = Input(shape = (None,))
 
     # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
-    x = Embedding(input_dim = n_words, output_dim = 128, input_length = None)(input)
+    x1 = Embedding(input_dim = n_words1, output_dim = 128, input_length = None)(input1)
+    x1 = Reshape((maxlen_seq, 128, 1))(x1)
+    x1 = Conv2D(4, kernel_size = (3,3), padding='same')(x1)
+    x1 = MaxPooling2D(pool_size=(1, 2))(x1)
+    x1 = Conv2D(8, kernel_size = (3,3), padding='same')(x1)
+    x1 = MaxPooling2D(pool_size=(1, 2))(x1)
+    x1 = Reshape((maxlen_seq,128//4*8))(x1)
+    x1 = Dense(128)(x1)
+    x1 = Activation('elu')(x1)
+    x1 = Dropout(0.5)(x1)
 
-    # Defining a bidirectional LSTM using the embedded representation of the inputs
-    x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
-    x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
-
+    x1 = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x1)
+    x1 = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x1)
+    x1 = Dense(32, activation="relu")(x1)
     # A dense layer to output from the LSTM's64 units to the appropriate number of tags to be fed into the decoder
-    y = TimeDistributed(Dense(n_tags, activation = "softmax"))(x)
+    y = Dense(n_tags, activation = "softmax")(x1)
 
     # Defining the model as a whole and printing the summary
-    model = Model(input, y)
+    model = Model(input1, y)
     model.summary()
 
     rmsprop = optimizers.Adam(lr=0.02)
@@ -135,28 +154,28 @@ if not cross_val:
 
 
     # Splitting the data for train and validation sets
-    X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
+    X_train, X_val, y_train, y_val = train_test_split(train_input_data1, train_target_data, test_size = .1, random_state = 0)
 
     # Training the model on the training data and validating using the validation set
-    model.fit(X_train, y_train, batch_size = 128, epochs = 1, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
+    model.fit(X_train, y_train, batch_size = 128, epochs = 20, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
 
     # Defining the decoders so that we can
     revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
-    revsere_encoder_index = {value:key for key,value in tokenizer_encoder.word_index.items()}
+    revsere_encoder_index = {value:key for key,value in tokenizer_encoder1.word_index.items()}
 
     model.load_weights("weights.best.hdf5")
 
-    y_train_pred = model.predict(train_input_data[:500])
+    y_train_pred = model.predict(train_input_data1[:500])
     edit_dis = []
-    for i in range(len(train_input_data)):
+    for i in range(500):
         output = print_results(train_input_seqs[i], y_train_pred[i], revsere_decoder_index)
         edit_dis.append(levenshtein(output, train_input_seqs[i]))
     print(np.mean(edit_dis))
 
-    y_test_pred = model.predict(test_input_data[:])
+    y_test_pred = model.predict(test_input_data1[:])
     result = []
     
-    for i in range(len(test_input_data)):
+    for i in range(len(test_input_data1)):
         output = print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index)
         result.append(output)
     df = pd.DataFrame(data={'id':test_df['id'], 'expected':result})
@@ -171,13 +190,13 @@ else:
     k=10
     cv_acc = []
     cv_loss = []
-    folds = list(KFold(n_splits=k, shuffle=True, random_state=1).split(train_input_data, train_target_data))
+    folds = list(KFold(n_splits=k, shuffle=True, random_state=1).split(train_input_data1, train_target_data))
     for j, (train_idx, val_idx) in enumerate(folds):
 
         print('\nFold ',j)
-        X_train_cv = train_input_data[train_idx]
+        X_train_cv = train_input_data1[train_idx]
         y_train_cv = train_target_data[train_idx]
-        X_valid_cv = train_input_data[val_idx]
+        X_valid_cv = train_input_data1[val_idx]
         y_valid_cv= train_target_data[val_idx]
         
         name_weights = "final_model_fold" + str(j) + "_weights.h5"
