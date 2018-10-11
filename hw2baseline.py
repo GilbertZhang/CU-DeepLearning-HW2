@@ -11,7 +11,27 @@ from keras import backend as K
 import tensorflow as tf
 from keras.callbacks import ModelCheckpoint
 from keras import optimizers
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import KFold
+
+def levenshtein(s1, s2):
+    if len(s1) < len(s2):
+        return levenshtein(s2, s1)
+
+    # len(s1) >= len(s2)
+    if len(s2) == 0:
+        return len(s1)
+
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1 # j+1 instead of j since previous_row and current_row are one character longer
+            deletions = current_row[j] + 1       # than s2
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    
+    return previous_row[-1]
 
 
 # The custom accuracy metric used for this task
@@ -70,8 +90,8 @@ train_input_data = sequence.pad_sequences(train_input_data, maxlen = maxlen_seq,
 
 # Targets
 train_target_data = tokenizer_decoder.texts_to_sequences(train_target_seqs)
-train_target_data = sequence.pad_sequences(train_target_data, maxlen = maxlen_seq, padding = 'post')
-train_target_data = to_categorical(train_target_data)
+train_target_data_ori = sequence.pad_sequences(train_target_data, maxlen = maxlen_seq, padding = 'post')
+train_target_data = to_categorical(train_target_data_ori)
 
 # Use the same tokenizer defined on train for tokenization of test
 test_input_data = tokenizer_encoder.texts_to_sequences(test_input_grams)
@@ -82,10 +102,10 @@ n_words = len(tokenizer_encoder.word_index) + 1
 n_tags = len(tokenizer_decoder.word_index) + 1
 
 def get_model():
-    input = Input(shape = (maxlen_seq,))
+    input = Input(shape = (None,))
 
     # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
-    x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
+    x = Embedding(input_dim = n_words, output_dim = 128, input_length = None)(input)
 
     # Defining a bidirectional LSTM using the embedded representation of the inputs
     x = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0.1))(x)
@@ -101,11 +121,11 @@ def get_model():
     rmsprop = optimizers.Adam(lr=0.02)
 
     # Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
-    model.compile(optimizer = rmsprop, loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
+    model.compile(optimizer = rmsprop, loss = "categorical_crossentropy", metrics = [accuracy])
     
     return model
 
-cross_val = True
+cross_val = False
 if not cross_val:
     
     model = get_model()
@@ -118,19 +138,27 @@ if not cross_val:
     X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
 
     # Training the model on the training data and validating using the validation set
-    model.fit(X_train, y_train, batch_size = 128, epochs = 10, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
+    model.fit(X_train, y_train, batch_size = 128, epochs = 1, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
 
     # Defining the decoders so that we can
     revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
     revsere_encoder_index = {value:key for key,value in tokenizer_encoder.word_index.items()}
 
     model.load_weights("weights.best.hdf5")
+
+    y_train_pred = model.predict(train_input_data[:500])
+    edit_dis = []
+    for i in range(len(train_input_data)):
+        output = print_results(train_input_seqs[i], y_train_pred[i], revsere_decoder_index)
+        edit_dis.append(levenshtein(output, train_input_seqs[i]))
+    print(np.mean(edit_dis))
+
     y_test_pred = model.predict(test_input_data[:])
     result = []
-    print(len(test_input_data))
+    
     for i in range(len(test_input_data)):
-        result.append(print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index))
-
+        output = print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index)
+        result.append(output)
     df = pd.DataFrame(data={'id':test_df['id'], 'expected':result})
     df.to_csv('prediction.csv', index=False)
 
@@ -140,11 +168,12 @@ else:
         mcp_save = ModelCheckpoint(name_weights, save_best_only=True, monitor='val_loss', mode='min')
         # reduce_lr_loss = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=patience_lr, verbose=1, epsilon=1e-4, mode='min')
         return [mcp_save]
-    k=3
-    cvscores = []
-    folds = list(StratifiedKFold(n_splits=k, shuffle=True, random_state=1).split(train_input_data, train_target_data))
+    k=10
+    cv_acc = []
+    cv_loss = []
+    folds = list(KFold(n_splits=k, shuffle=True, random_state=1).split(train_input_data, train_target_data))
     for j, (train_idx, val_idx) in enumerate(folds):
-        
+
         print('\nFold ',j)
         X_train_cv = train_input_data[train_idx]
         y_train_cv = train_target_data[train_idx]
@@ -162,4 +191,7 @@ else:
                     validation_data = (X_valid_cv, y_valid_cv),
                     callbacks = callbacks)
         
-        print(model.evaluate(X_valid_cv, y_valid_cv))
+        loss, _, acc = model.evaluate(X_valid_cv, y_valid_cv)
+        cv_acc.append(acc)
+        cv_loss.append(loss)
+    print("Average Accuracy: {}, Average Loss: {}".format(np.mean(cv_acc), np.mean(cv_loss)))
