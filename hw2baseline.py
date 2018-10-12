@@ -69,7 +69,7 @@ def seq2ngrams(seqs, n = 1):
 train_df = pd.read_csv('train.csv')
 test_df = pd.read_csv('test.csv')
 
-maxlen_seq = 512
+maxlen_seq = 1024
 
 def preprocessing_tain_x(train_input_seqs, n):
     train_input_grams = seq2ngrams(train_input_seqs, n)
@@ -113,10 +113,10 @@ n_words1 = len(tokenizer_encoder1.word_index) + 1
 n_tags = len(tokenizer_decoder.word_index) + 1
 
 def get_model():
-    input1 = Input(shape = (None,))
+    input1 = Input(shape = (maxlen_seq,))
 
     # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
-    x1 = Embedding(input_dim = n_words1, output_dim = 128, input_length = None)(input1)
+    x1 = Embedding(input_dim = n_words1, output_dim = 128, input_length = maxlen_seq)(input1)
 
     x1 = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0))(x1)
     x1 = Bidirectional(LSTM(units = 64, return_sequences = True, recurrent_dropout = 0))(x1)
@@ -145,10 +145,10 @@ if not cross_val:
 
 
     # Splitting the data for train and validation sets
-    X_train, X_val, y_train, y_val = train_test_split(train_input_data1, train_target_data, test_size = .1, random_state = 27)
+    X_train, X_val, y_train, y_val = train_test_split(train_input_data1, train_target_data, test_size = .1, random_state = 777)
 
     # Training the model on the training data and validating using the validation set
-    model.fit(X_train, y_train, batch_size = 128, epochs = 1, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
+    model.fit(X_train, y_train, batch_size = 128, epochs = 15, validation_data = (X_val, y_val), callbacks=callbacks_list, verbose = 1)
 
     # Defining the decoders so that we can
     revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
@@ -156,18 +156,17 @@ if not cross_val:
 
     model.load_weights("weights.best.hdf5")
 
-    y_train_pred = model.predict(train_input_data1[:500])
-    edit_dis = []
-    for i in range(500):
-        output = print_results(train_input_seqs[i], y_train_pred[i], revsere_decoder_index)
-        edit_dis.append(levenshtein(output, train_input_seqs[i]))
-    print(np.mean(edit_dis))
+    # y_train_pred = model.predict(train_input_data1[:500])
+    # edit_dis = []
+    # for i in range(500):
+    #     output = print_results(train_input_seqs[i], y_train_pred[i], revsere_decoder_index)
+    #     edit_dis.append(levenshtein(output, train_input_seqs[i]))
+    # print(np.mean(edit_dis))
 
     result = []
-    
+    y_test_pred = model.predict(test_input_data1)
     for i in range(len(test_input_data1)):
-        y_test_pred = model.predict(np.array(test_input_data1[i]), batch_size=1)
-        output = print_results(test_input_seqs[i], y_test_pred, revsere_decoder_index)
+        output = print_results(test_input_seqs[i], y_test_pred[i], revsere_decoder_index)
         result.append(output)
     df = pd.DataFrame(data={'id':test_df['id'], 'expected':result})
     df.to_csv('prediction.csv', index=False)
