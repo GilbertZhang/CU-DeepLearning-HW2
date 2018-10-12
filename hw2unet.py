@@ -47,7 +47,7 @@ def seq2ngrams(seqs, n = 1):
 train_df = pd.read_csv('train.csv')
 test_df = pd.read_csv('test.csv')
 
-maxlen_seq = 1024
+maxlen_seq = 2048
 
 # Loading and converting the inputs to trigrams
 train_input_seqs, train_target_seqs = train_df[['input', 'expected']][(train_df.len <= maxlen_seq)].values.T
@@ -158,23 +158,7 @@ y = Dense(n_tags, activation = 'softmax')(concat)
 # Defining the model as a whole and printing the summary
 model = Model(input, y)
 model.summary()
-"""
-_________________________________________________________________
-Layer (type)                 Output Shape              Param #   
-=================================================================
-input_1 (InputLayer)         (None, 512)               0         
-_________________________________________________________________
-embedding_1 (Embedding)      (None, 512, 128)          1225984   
-_________________________________________________________________
-bidirectional_1 (Bidirection (None, 512, 128)          98816     
-_________________________________________________________________
-time_distributed_1 (TimeDist (None, 512, 9)            1161      
-=================================================================
-Total params: 1,325,961
-Trainable params: 1,325,961
-Non-trainable params: 0
 
-"""
 adam = optimizers.Adam(lr=0.01)
 # Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
 model.compile(optimizer = adam, loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
