@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 from keras.metrics import categorical_accuracy
 from keras import backend as K
 import tensorflow as tf
+from keras import optimizers
 
 
 # The custom accuracy metric used for this task
@@ -116,6 +117,7 @@ drop5 = Dropout(0.5)(conv5)
 up6 = Conv1D(512, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(drop5))
 up6 = BatchNormalization()(up6)
 merge6 = concatenate([drop4,up6], axis = 2)
+merge6 = Dropout(0.5)(merge6)
 conv6 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge6)
 conv6 = BatchNormalization()(conv6)
 conv6 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv6)
@@ -124,6 +126,7 @@ conv6 = BatchNormalization()(conv6)
 up7 = Conv1D(256, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(conv6))
 up7 = BatchNormalization()(up7)
 merge7 = concatenate([conv3,up7], axis = 2)
+merge7 = Dropout(0.5)(merge7)
 conv7 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge7)
 conv7 = BatchNormalization()(conv7)
 conv7 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv7)
@@ -132,6 +135,7 @@ conv7 = BatchNormalization()(conv7)
 up8 = Conv1D(128, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(conv7))
 up8 = BatchNormalization()(up8)
 merge8 = concatenate([conv2,up8], axis = 2)
+merge8 = Dropout(0.5)(merge8)
 conv8 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8)
 conv8 = BatchNormalization()(conv8)
 conv8 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8)
@@ -140,6 +144,7 @@ conv8 = BatchNormalization()(conv8)
 up9 = Conv1D(64, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(conv8))
 up9 = BatchNormalization()(up9)
 merge9 = concatenate([conv1,up9], axis = 2)
+merge9 = Dropout(0.5)(merge9)
 conv9 = Conv1D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
 conv9 = BatchNormalization()(conv9)
 conv9 = Conv1D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
@@ -170,9 +175,9 @@ Trainable params: 1,325,961
 Non-trainable params: 0
 
 """
-
+adam = optimizers.Adam(lr=0.02)
 # Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
-model.compile(optimizer = "rmsprop", loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
+model.compile(optimizer = adam, loss = "categorical_crossentropy", metrics = ["accuracy", accuracy])
 
 # Splitting the data for train and validation sets
 X_train, X_val, y_train, y_val = train_test_split(train_input_data, train_target_data, test_size = .1, random_state = 0)
