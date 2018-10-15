@@ -45,7 +45,8 @@ def seq2ngrams(seqs, n = 1):
 
 
 
-train_df = pd.read_csv('train.csv')
+# train_df = pd.read_csv('train.csv')
+train_df = pd.read_csv('training_data.csv')
 test_df = pd.read_csv('test.csv')
 
 maxlen_seq = 2048
@@ -87,70 +88,70 @@ def get_model():
 
     # Defining an embedding layer mapping from the words (n_words) to a vector of len 128
     x = Embedding(input_dim = n_words, output_dim = 128, input_length = maxlen_seq)(input)
-    conv1 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
-    conv1 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
+    conv1 = Conv1D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(x)
+    conv1 = Conv1D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
     conv1 = BatchNormalization()(conv1)
     conv1 = Dropout(0.4)(conv1)
     pool1 = MaxPooling1D(pool_size=(2))(conv1)
 
-    conv2 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool1)
-    conv2 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv2)
+    conv2 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool1)
+    conv2 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv2)
     conv2 = BatchNormalization()(conv2)
     conv2 = Dropout(0.4)(conv2)
     pool2 = MaxPooling1D(pool_size=(2))(conv2)
 
-    conv3 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool2)
-    conv3 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
+    conv3 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool2)
+    conv3 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
     conv3 = BatchNormalization()(conv3)
     conv3 = Dropout(0.4)(conv3)
     pool3 = MaxPooling1D(pool_size=(2))(conv3)
 
 
-    conv4 = Conv1D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool3)
-    conv4 = Conv1D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv4)
+    conv4 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool3)
+    conv4 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv4)
     conv4 = BatchNormalization()(conv4)
     drop4 = Dropout(0.4)(conv4)
     pool4 = MaxPooling1D(pool_size=(2))(drop4)
 
-    conv5 = Conv1D(2048, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool4)
-    conv5 = Conv1D(2048, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
+    conv5 = Conv1D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool4)
+    conv5 = Conv1D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
     conv5 = BatchNormalization()(conv5)
     drop5 = Dropout(0.4)(conv5)
 
-    up6 = Conv1D(1024, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(drop5))
+    up6 = Conv1D(512, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(drop5))
     up6 = BatchNormalization()(up6)
     merge6 = concatenate([drop4,up6], axis = 2)
     merge6 = Dropout(0.3)(merge6)
-    conv6 = Conv1D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge6)
+    conv6 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge6)
     conv6 = BatchNormalization()(conv6)
-    conv6 = Conv1D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv6)
+    conv6 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv6)
     conv6 = BatchNormalization()(conv6)
 
-    up7 = Conv1D(512, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(conv6))
+    up7 = Conv1D(256, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(conv6))
     up7 = BatchNormalization()(up7)
     merge7 = concatenate([conv3,up7], axis = 2)
     merge7 = Dropout(0.3)(merge7)
-    conv7 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge7)
+    conv7 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge7)
     conv7 = BatchNormalization()(conv7)
-    conv7 = Conv1D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv7)
+    conv7 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv7)
     conv7 = BatchNormalization()(conv7)
 
-    up8 = Conv1D(256, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(conv7))
+    up8 = Conv1D(128, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(conv7))
     up8 = BatchNormalization()(up8)
     merge8 = concatenate([conv2,up8], axis = 2)
     merge8 = Dropout(0.3)(merge8)
-    conv8 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8)
+    conv8 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8)
     conv8 = BatchNormalization()(conv8)
-    conv8 = Conv1D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8)
+    conv8 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8)
     conv8 = BatchNormalization()(conv8)
 
-    up9 = Conv1D(128, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(conv8))
+    up9 = Conv1D(64, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling1D(size = (2))(conv8))
     up9 = BatchNormalization()(up9)
     merge9 = concatenate([conv1,up9], axis = 2)
     merge9 = Dropout(0.3)(merge9)
-    conv9 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
+    conv9 = Conv1D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
     conv9 = BatchNormalization()(conv9)
-    conv9 = Conv1D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
+    conv9 = Conv1D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
     conv9 = BatchNormalization()(conv9)
 
     concat = Dense(32, activation = 'relu')(conv9)
@@ -167,7 +168,7 @@ def get_model():
     
     return model
 
-cross_val = False
+cross_val = True
 if not cross_val:
     model = get_model()
     # Splitting the data for train and validation sets
@@ -202,9 +203,8 @@ else:
     k=10
     cv_acc = []
     cv_loss = []
-    folds = list(KFold(n_splits=k, shuffle=True, random_state=1).split(train_input_data, train_target_data))
+    folds = list(KFold(n_splits=k).split(train_input_data, train_target_data))
     for j, (train_idx, val_idx) in enumerate(folds):
-
         print('\nFold ',j)
         X_train_cv = train_input_data[train_idx]
         y_train_cv = train_target_data[train_idx]
@@ -216,14 +216,17 @@ else:
         model = get_model()
         model.fit(X_train_cv, y_train_cv,
                     batch_size = 128,
-                    epochs=15,
+                    epochs=20,
                     shuffle=True,
                     verbose=1,
                     validation_data = (X_valid_cv, y_valid_cv),
                     callbacks = callbacks)
-        
-        loss, _, acc = model.evaluate(X_valid_cv, y_valid_cv)
-        print(loss, acc)
-        cv_acc.append(acc)
-        cv_loss.append(loss)
-    print("Average Accuracy: {}, Average Loss: {}".format(np.mean(cv_acc), np.mean(cv_loss)))
+    model.load_weights(name_weights)
+    y_val_pred = model.predict(X_valid_cv[:])
+    result = []
+    print(len(y_val_pred))
+    for i in range(len(y_val_pred)):
+        result.append(print_results(X_valid_cv[i], y_val_pred[i], revsere_decoder_index))
+
+    df = pd.DataFrame(data={'id':val_idx, 'expected':result})
+    df.to_csv('jz2979_jz2997_fold0{}.csv'.format(j+1), index=False)
