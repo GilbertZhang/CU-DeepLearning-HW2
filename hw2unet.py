@@ -197,7 +197,7 @@ if not cross_val:
 
 else:
     def get_callbacks(name_weights, patience_lr):
-        mcp_save = ModelCheckpoint(name_weights, save_best_only=True, monitor='val_loss', mode='min')
+        mcp_save = ModelCheckpoint(name_weights, save_best_only=True, monitor='val_loss', mode='min', verbose=1)
         # reduce_lr_loss = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=patience_lr, verbose=1, epsilon=1e-4, mode='min')
         return [mcp_save]
     k=10
@@ -221,12 +221,12 @@ else:
                     verbose=1,
                     validation_data = (X_valid_cv, y_valid_cv),
                     callbacks = callbacks)
-    model.load_weights(name_weights)
-    y_val_pred = model.predict(X_valid_cv[:])
-    result = []
-    print(len(y_val_pred))
-    for i in range(len(y_val_pred)):
-        result.append(print_results(X_valid_cv[i], y_val_pred[i], revsere_decoder_index))
+        model.load_weights(name_weights)
+        y_val_pred = model.predict(X_valid_cv[:])
+        result = []
+        print(len(y_val_pred))
+        for i in range(len(y_val_pred)):
+            result.append(print_results(X_valid_cv[i], y_val_pred[i], revsere_decoder_index))
 
-    df = pd.DataFrame(data={'id':val_idx, 'expected':result})
-    df.to_csv('jz2979_jz2997_fold0{}.csv'.format(j+1), index=False)
+        df = pd.DataFrame(data={'id':val_idx, 'expected':result})
+        df.to_csv('jz2979_jz2997_fold0{}.csv'.format(j+1), index=False)
