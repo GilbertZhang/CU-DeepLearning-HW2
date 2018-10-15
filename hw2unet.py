@@ -160,7 +160,7 @@ def get_model():
 
     # Defining the model as a whole and printing the summary
     model = Model(input, y)
-    model.summary()
+    # model.summary()
 
     adam = optimizers.Adam(lr=0.01)
     # Setting up the model with categorical x-entropy loss and the custom accuracy function as accuracy
@@ -225,6 +225,9 @@ else:
         y_val_pred = model.predict(X_valid_cv[:])
         result = []
         print(len(y_val_pred))
+            # Defining the decoders so that we can
+        revsere_decoder_index = {value:key for key,value in tokenizer_decoder.word_index.items()}
+        revsere_encoder_index = {value:key for key,value in tokenizer_encoder.word_index.items()}
         for i in range(len(y_val_pred)):
             result.append(print_results(X_valid_cv[i], y_val_pred[i], revsere_decoder_index))
 
